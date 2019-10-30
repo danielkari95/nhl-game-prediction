@@ -1,0 +1,10 @@
+\contentsline {chapter}{\numberline {1}Introduction}{2}
+\contentsline {chapter}{\numberline {2}Machine learning}{3}
+\contentsline {section}{\numberline {2.1}Introduction}{3}
+\contentsline {section}{\numberline {2.2}Formal definition}{4}
+\contentsline {section}{\numberline {2.3}Model evaluation}{4}
+\contentsline {section}{\numberline {2.4}Cost function}{4}
+\contentsline {section}{\numberline {2.5}Multilayer Perceptron}{4}
+\contentsline {chapter}{\numberline {3}Prediction}{5}
+\contentsline {section}{\numberline {3.1}Background}{5}
+\contentsline {section}{\numberline {3.2}Variables affecting prediction}{5}

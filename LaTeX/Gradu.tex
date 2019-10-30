@@ -1,0 +1,219 @@
+\documentclass[12pt,a4paper,leqno]{report}
+
+\usepackage[ansinew]{inputenc}
+\usepackage[T1]{fontenc}
+% \usepackage[finnish]{babel}
+\usepackage{amsthm}
+\usepackage{amsfonts}         
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\No}{\mathbb{N}_0}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\diam}{\operatorname{diam}}
+
+\theoremstyle{plain}
+\newtheorem{lause}[equation]{Lause}
+\newtheorem{lem}[equation]{Lemma}
+\newtheorem{prop}[equation]{Propositio}
+\newtheorem{kor}[equation]{Korollaari}
+
+\theoremstyle{definition}
+\newtheorem{maar}[equation]{Määritelmä}
+\newtheorem{konj}[equation]{Konjektuuri}
+\newtheorem{esim}[equation]{Esimerkki}
+
+\theoremstyle{remark}
+\newtheorem{huom}[equation]{Huomautus}
+
+\pagestyle{plain}
+\setcounter{page}{1}
+\addtolength{\hoffset}{-1.15cm}
+\addtolength{\textwidth}{2.3cm}
+\addtolength{\voffset}{0.45cm}
+\addtolength{\textheight}{-0.9cm}
+
+\title{Master's thesis}
+\author{Daniel Kari}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}\label{johd}
+
+The use of statistical methods in sports is a continuosly evolving field of study. 
+
+\chapter{Machine learning}\label{ML}
+
+\section{Introduction}
+
+% In 1959, computer scientist Arthur Samuel defined machine learning as a field of study that gives computers the ability to learn without being explicitly programmed. In practice this happens by defining task % 
+
+Machine learning can be broadly defined as a process in which a machine changes its structure to improve expected future performance based on past experience \cite{Nilsson}. It is commonly used when a problem cannot be solved explicitly or when creating such solution is not feasible. This means the solutions provided with machine learning are never perfect, except for trivial cases. In all other occasions one needs to settle for `good enough'. \\
+
+When machine learning is applied in practice, the first step is to specify the task one wants to solve. This might for example be detecting whether or not an image contains a dog. After that suitable data is gathered and possibly labeled manually. We might also want to determine which variables in the data are most relevant for the task in question. This phase might include formal process of \emph{feature selection}, which can be considered as a field of its own. Quality and quantity of data are essential to gain meaningful results \cite{Mohri}. \\
+
+The learning structure, also called learner, then receives subset of the data for \emph{training}. In \emph{supervised learning} the data consists of input-output pairs. The goal is to predict the output, which might integer or real-valued depending on the task, based on the input for unseen data points, also called \emph{test set}. When the output is an integer and number of output values is in some sense limited, the task is called \emph{classification}. Detecting dogs in images is a good of example of simple classification, since the image either has a dog in it or it does not. The two alternatives can be encoded as zeroes and ones and thought as a binary classification problem. By contrast, in \emph{regression} problems the output is a continuous numerical value. The difference between the tasks affects for example how the quality of prediction is measured.  \newpage
+
+The most fundamental objective in machine learning is \emph{generalization} \cite{Mohri}. In supervised setting, the learner is trained with finite sample of labeled data, utilizing some \emph{function} in prediction. After training, the learner should be able to predict the output for separate test data as accurately as possible, that is to say generalize well.  \\
+
+If the function is complex, it might be able to predict the labels for training sample perfectly of with very little error. However, this does not guarantee the prediction will be accurate for different sample of the data. The function is \emph{overfitting}, if it models random noise in the training sample, resulting in decreased prediction accuracy for test data. Correspondingly the function can also be too simple and \emph{underfit}, if it fails to detect patterns present in the data. 
+
+In order to avoid underfitting and overfitting, we need to establish some sort of model evaluation criteria. 
+
+\section{Formal definition}
+
+
+
+
+train test split
+
+Free lunch
+
+% \section{Supervised Learning}
+
+\section{Model evaluation}
+
+\section{Cost function}
+
+
+\section{Multilayer Perceptron}
+
+
+\chapter{Prediction}
+
+\section{Background}
+
+Predicting the outcome of an NHL game has been generally considered most difficult out of the four major North American leagues. 
+
+\section{Variables affecting prediction}
+
+%\begin{maar}\label{genmaar}
+%\emph{Generoiva funktio} lukujonolle $(a_k)_{k=0}^\infty$ on
+%\begin{equation}
+%a(x)=\sum_{k=0}^\infty a_kx^k=a_0+a_1x+a_2x^2+\ldots.
+%\end{equation}
+%\end{maar}
+%
+%Todennäköisyysgeneroiva funktio on määritelty ainoastaan diskreeteille
+%jakaumille, mutta momenttigeneroiva funktio on määritelty sekä
+%diskreeteille että jatkuville jakaumille. Jakaumien ominaisuuksien tutkimisessa
+%generoivat funktiot ovat monella tapaa hyödyllisiä. Näin on
+%esimerkiksi siksi, että generoiva funktio määrää jakauman yksikäsitteisesti.
+%Generoivien funktioiden avulla voidaan laskea jakaumien tunnuslukuja,
+%odotusarvot, varianssit ja momentit. Lisäksi niitä voidaan
+%käyttää riippumattomien satunnaismuuttujien summan jakautumisen
+%tutkimiseen.
+%
+%Tutkielma on rakennettu siten, että ensin esittelen todennäköisyysgeneroivan
+%funktion ja todistan sen ominaisuuksia luvussa \ref{tngen}. Luvussa
+%\ref{momgen} esittelen momenttigeneroivat funktiot diskreeteille ja 
+%jatkuville jakaumille sekä todistan niihin liittyviä ominaisuuksia. 
+%Oletan tunnetuksi tavallisimmat todennäköisyyslaskentaan
+%liittyvät käsitteet, ks.\ \cite{Tuo}.
+%
+%\chapter{Todennäköisyysgeneroiva funktio}\label{tngen}
+%
+%\begin{maar}\label{tngenmaar}
+%Jos $X$ on diskreetti satunnaismuuttuja, joka saa
+%arvokseen luonnollisia lukuja, niin $X$:n \emph{todennäköisyysgeneroiva 
+%funktio} on
+%\begin{equation}\label{genf}
+%G_X(t)=\sum_{k=0}^\infty P(X=k) t^k=\sum_{k=0}^\infty p_k t^k.
+%\end{equation}
+%\end{maar}
+%
+%Mikäli $X$:n arvojoukko on äärellinen ja arvojoukon jäsenten todennäköisyydet
+%ovat nollasta poikkeavia, $G_X$ on määritelty kaikilla reaaliluvuilla
+%$t$. Muutoin $G_X$ on määritelty ainoastaan niille $t\in\R$, joilla $G_X$
+%suppenee. Koska pistetodennäköisyydet $p_k=P(X=k)$ ovat ei-negatiivisia ja 
+%summautuvat ykköseksi, sarja suppenee ainakin suljetulla välillä $t\in[-1, 1]$.
+%
+%Generoiva funktio voidaan odotusarvon avulla ilmaista muodossa
+%\begin{equation}\label{genvar}
+%G_X(t) = E(t^X).
+%\end{equation}
+%
+%\begin{lause}
+%Jos $X$ on diskreetti satunnaismuuttuja, joka saa arvokseen
+%luonnollisia lukuja, niin $X$:n todennäköisyysgeneroiva funktio määrää $X$:n
+%jakauman yksikäsitteisesti.
+%\end{lause}
+%
+%\begin{proof}
+%Koska määritelmän mukaan $G_X$ on ainakin välillä $[-1, 1]$ suppeneva
+%potenssisarja, niin sillä on kaikkien kertalukujen derivaatat ainakin
+%välillä $(-1, 1)$ ja
+%\[
+%p_k=\frac{G_X^{(k)}(0)}{k!},\quad k\in\N. 
+%\]
+%Tästä näemme, että $G_X$ määrää luvut $p_k$ ja täten $X$:n 
+%jakauman yksikäsitteisesti.
+%\end{proof}
+%
+%Seuraavaksi esittelemme tutuimpien diskreettien jakaumien todennäköisyysgeneroivat
+%funktiot. Jne\ldots
+%
+%\chapter{Momenttigeneroiva funktio}\label{momgen}
+%
+%\begin{maar}\label{mommaar}
+%Jos $X$ on satunnaismuuttuja ja odotusarvo $E(e^{tX})$
+%on olemassa, kun $|t| < \delta$, $\delta > 0$, niin $X$:n \emph{momenttigeneroiva 
+%funktio} on
+%\begin{equation}\label{momf}
+%M_X(t) = E(e^{tX}).
+%\end{equation}
+%\end{maar}
+%
+%Todennäköisyys- ja momenttigeneroivilla funktioilla on seuraava yhteys:
+%
+%\begin{lause}
+%Jos $X$ on diskreetti satunnaismuuttuja, jonka arvojoukko sisältyy
+%joukkoon $\{0,1,2,\ldots\}$, niin 
+%\[
+%M_X(t) = G_X(e^t)
+%\]
+%edellyttäen, että $G_X$ on olemassa, kun $|t| < 1 + \delta$, $\delta > 0$.
+%\end{lause}
+%
+%\begin{proof} Nyt
+%\[
+%M_X(t) = E(e^{tX}) = E((e^t)^X) = G_X(e^t).\qedhere
+%\]
+%\end{proof}
+%
+%Ja niin edelleen\ldots
+
+\begin{thebibliography}{9}
+
+\bibitem{Nilsson}
+Nils J. Nilsson: Introduction to Machine Learning, Stanford University, 1998.
+
+\bibitem{Mohri}
+Mehryar Mohri, Afshin Rostamizadeh, and Ameet Talwalkar: Foundations of Machine Learning,
+MIT Press, Second Edition, 2018.
+
+\bibitem{Weissbock}
+
+
+
+%\bibitem{Hol}
+%Ilkka Holopainen: Mitta ja integraali, luentomoniste, Helsingin yliopisto, 2004.
+%
+%\bibitem{Ros}
+%Sheldon Ross: A First Course in Probability, 5th edition, Prentice-Hall, 1998.
+%
+%\bibitem{Tuo}
+%Pekka Tuominen: Todennäköisyyslaskenta I, 5.\ painos, Limes ry, 2000.
+
+\end{thebibliography}
+
+\end{document}
