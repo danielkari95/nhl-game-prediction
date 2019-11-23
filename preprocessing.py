@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import json
 
 from sklearn.preprocessing import StandardScaler
 
@@ -17,6 +18,16 @@ def home_team_for(ids):
         return 1
     else:
         return 0
+
+def goal_difference(x):
+    if 'OT' in x[0] or 'SO' in x[0]:
+        return 0
+    elif np.abs(x[1]-x[2]) <= 2:
+        return x[1]-x[2]
+    elif x[1]-x[2] > 2:
+        return 3
+    else:
+        return -3
 
 def result(result, binary=False):
     if not binary:
@@ -54,12 +65,34 @@ def offensive_zone_away(x):
     if x[0] <= -25 and x[1] == 1:
         return 1
     else:
-        return 0    
+        return 0   
+    
+def save_files(X, y, X_columns, y_columns, suffix):
+    np.save('data/numpy/X{0}.npy'.format(suffix), X)
+    np.save('data/numpy/y{0}.npy'.format(suffix), y)
+    with open('data/json/X{0}_columns.json'.format(suffix), 'w') as outfile:
+        json.dump(X_columns, outfile)
+    with open('data/json/y{0}_columns.json'.format(suffix), 'w') as outfile:
+        json.dump(y_columns, outfile)
+        
+def load_data(suffix):
+    X = np.load('data/numpy/X{0}.npy'.format(suffix))
+    y = np.load('data/numpy/y{0}.npy'.format(suffix))
+    with open('data/json/X{0}_columns.json'.format(suffix)) as jsonfile:
+        X_columns = json.load(jsonfile)
+    with open('data/json/y{0}_columns.json'.format(suffix)) as jsonfile:
+        y_columns = json.load(jsonfile)
+    return X, y, X_columns, y_columns
 
-def load_data(plays, games, relevant_events=None, save_as_file=False, 
-              return_arrays=False, include=[], zero_padding=True, 
-              binary_y=False, suffix=""):    
-    """ Function for loading the play-by-play data and preprocessing it. """
+def preprocess(plays=None, games=None, relevant_events=None, include=[], 
+               save_as_file=False, return_arrays=False, zero_padding=True, 
+               binary_y=False, y_goal_diff=False, suffix=""):    
+    """ Function for preprocessing the play-by-play data for analysis. """
+    if plays == None:
+        plays = pd.read_csv('data/csv/game_plays.csv')
+
+    if games == None:
+        games = pd.read_csv('data/csv/game.csv')
     
     if relevant_events == None:
         relevant_events = [
@@ -73,7 +106,8 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
                            'Missed Shot'
                            ]
 
-    plays = plays[plays['event'].isin(relevant_events)] # Only predict based on these events
+    plays = plays[plays['event'].isin(relevant_events)] 
+    # Only predict based on these events
 
     # plays['game_time'] = (plays['period']-1)*1200+plays['periodTime']
     plays = plays[plays['period'] <= 3] # Only plays in regulation included
@@ -87,7 +121,7 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
                     (plays['event']=='Faceoff'))]
 
     plays = plays.dropna()
-
+    
     if not zero_padding:
         lower = plays.groupby(['game_id']).size().describe()['25%'].astype(np.int64)
         upper = plays.groupby(['game_id']).size().describe()['75%'].astype(np.int64)
@@ -110,7 +144,6 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
         plays.loc[plays['event'].isin(shots), 'danger'] = plays.loc[
                 plays['event'].isin(shots), 'distance'].apply(danger)
         plays = pd.get_dummies(plays, columns=['event', 'danger'])
-        
     else:
         plays = pd.get_dummies(plays, columns=['event'])
     
@@ -127,8 +160,15 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
     plays['home_team_for'] = plays[['team_id_for', 'home_team_id']].apply(
                      home_team_for, axis=1)
     
-    games['result'] = games['outcome'].apply(result, binary=binary_y)
-    y = pd.get_dummies(games['result']).to_numpy(dtype=np.int8)
+    if not y_goal_diff:
+        games['y'] = games['outcome'].apply(result, binary=binary_y)
+    else:
+        games['y'] = games[['outcome', 'home_goals', 
+                                     'away_goals']].apply(goal_difference, axis=1)
+    
+    y = pd.get_dummies(games['y'])
+    y_columns = dict(zip(y.columns, range(len(y.columns))))
+    y = y.to_numpy()
     
     if 'zones' in include:
         plays['offensive_zone_home'] = plays[['st_x', 'home_team_for']].apply(
@@ -136,10 +176,10 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
         plays['offensive_zone_away'] = plays[['st_x', 'home_team_for']].apply(
                                 offensive_zone_away, axis=1)
 
-    relevant_columns = ['game_id', 'st_x', 'st_y', 'distance', 'angle',
+    predict_columns = ['game_id', 'st_x', 'st_y', 'distance', 'angle',
                         'home_team_for', 'offensive_zone_home', 'offensive_zone_away']
 
-    plays = plays.loc[:, (plays.columns.isin(relevant_columns) | 
+    plays = plays.loc[:, (plays.columns.isin(predict_columns) | 
             plays.columns.str.contains('event') |
             plays.columns.str.contains('danger'))]
 
@@ -148,7 +188,6 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
         scale_columns = ['st_x', 'st_y', 'distance', 'angle']
         plays.loc[:, plays.columns.isin(scale_columns)] = StandardScaler().fit_transform(
                             plays.loc[:, plays.columns.isin(scale_columns)])
-
     else:
         plays = plays.drop(columns=['st_x', 'st_y'])
         
@@ -156,19 +195,20 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
         plays = plays.drop(columns=['distance'])
 
     n_games = len(plays.game_id.unique())
-    n_events = plays.groupby(['game_id']).size().describe()['min'].astype(np.int64)
     if zero_padding:
         n_events = plays.groupby(['game_id']).size().describe()['max'].astype(np.int64)
-    n_columns = len(plays.columns)-1
+    else:
+        n_events = plays.groupby(['game_id']).size().describe()['min'].astype(np.int64)
+    n_columns = len(plays.columns)
 
-    X = np.zeros((n_games, n_events, n_columns)) # Initialize 3D arrays for data
+    X = np.zeros((n_games, n_events, n_columns)) # Initialize 3D array for data
     
-    if zero_padding:
-        index_dummy = plays.columns.get_loc('event_dummy')-1
+    if zero_padding: 
+        index_dummy = plays.columns.get_loc('event_dummy') 
 
     for i, game_id in enumerate(sorted(plays.game_id.unique())):
-        game_events = plays[plays['game_id'] == game_id].iloc[:,1:]
-        if zero_padding:
+        game_events = plays[plays['game_id'] == game_id]
+        if zero_padding: # Fill with dummy values
             fill = np.zeros((n_events-game_events.shape[0], n_columns))
             fill[:, index_dummy] = 1
             X[i] = np.vstack((game_events.to_numpy(), fill))
@@ -176,12 +216,10 @@ def load_data(plays, games, relevant_events=None, save_as_file=False,
         else:
             X[i] = game_events.iloc[:n_events,:].to_numpy()    
 
-    # np.save('X_full_features.npy', X)
-    # np.save('X_without_coords.npy', X)
-
+    X_columns = dict(zip(plays.columns, range(n_columns)))
+    
     if save_as_file:
-        np.save('data/numpy/X{0}.npy'.format(suffix), X)
-        np.save('data/numpy/y{0}.npy'.format(suffix), y)
+        save_files(X, y, X_columns, y_columns, suffix)
     
     if return_arrays:
-        return X, y
+        return X, y, X_columns, y_columns

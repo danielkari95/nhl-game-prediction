@@ -1,3 +1,2 @@
-*.csv
-*.npy
-*.json
+/data/**
+.ipynb_checkpoints.*
