@@ -1,4 +1,4 @@
-# How accurately can we predict the result of an NHL game using the play-by-play data?
+# How accurately can we predict the result of an NHL game using play-by-play data?
 
 This analysis is for my master's thesis.
 
