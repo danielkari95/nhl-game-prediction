@@ -1,18 +1,10 @@
 import numpy as np
 import pandas as pd
 import json
+import measures
 
 from sklearn.preprocessing import StandardScaler
 
-def distance(x):
-    return np.sqrt((x[0]-90.0)**2+x[1]**2)
-
-def angle(x):
-    if 90.0-x[0] == x[1]:
-        return 0
-    else:
-        return np.degrees(np.arccos((90.0-x[0])/x[1]))
-    
 def home_team_for(ids):
     if ids[0] == ids[1]:
         return 1
@@ -43,30 +35,6 @@ def result(result, binary=False):
         else:
             return 'b_away_win'
 
-def danger(distance):
-    if distance <= 15:
-        return 'a_high'
-    elif distance <= 30:
-        return 'b_med'
-    else:
-        return 'c_low'
-
-def offensive_zone_home(x):
-    if x[0] >= 25 and x[1] == 1:
-        return 1
-    elif x[0] <= -25 and x[1] == 0:
-        return 1
-    else:
-        return 0
-
-def offensive_zone_away(x):
-    if x[0] >= 25 and x[1] == 0:
-        return 1
-    if x[0] <= -25 and x[1] == 1:
-        return 1
-    else:
-        return 0   
-    
 def save_files(X, y, X_columns, y_columns, suffix):
     np.save('data/numpy/X{0}.npy'.format(suffix), X)
     np.save('data/numpy/y{0}.npy'.format(suffix), y)
@@ -83,6 +51,31 @@ def load_data(suffix):
     with open('data/json/y{0}_columns.json'.format(suffix)) as jsonfile:
         y_columns = json.load(jsonfile)
     return X, y, X_columns, y_columns
+
+def to_3d_array(plays, zero_padding):
+    n_games = len(plays.game_id.unique())
+    if zero_padding:
+        n_events = plays.groupby(['game_id']).size().describe()['max'].astype(np.int64)
+    else:
+        n_events = plays.groupby(['game_id']).size().describe()['min'].astype(np.int64)
+    n_columns = len(plays.columns)
+
+    X = np.zeros((n_games, n_events, n_columns)) # Initialize 3D array for data
+    
+    if zero_padding: 
+        index_dummy = plays.columns.get_loc('event_dummy') 
+
+    for i, game_id in enumerate(sorted(plays.game_id.unique())):
+        game_events = plays[plays['game_id'] == game_id]
+        if zero_padding: # Fill with dummy values
+            fill = np.zeros((n_events-game_events.shape[0], n_columns))
+            fill[:, index_dummy] = 1
+            X[i] = np.vstack((game_events.to_numpy(), fill))
+        # full_events = np.vstack((game_events, fill))
+        else:
+            X[i] = game_events.iloc[:n_events,:].to_numpy()
+    
+    return X
 
 def preprocess(plays=None, games=None, relevant_events=None, include=[], 
                save_as_file=False, return_arrays=False, zero_padding=True, 
@@ -133,16 +126,16 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
         plays = plays.loc[plays['game_id'].isin(ids)]
     
     if 'distance' in include or 'danger' in include:
-        plays['distance'] = plays[['st_x', 'st_y']].apply(distance, axis=1)
+        plays['distance'] = plays[['st_x', 'st_y']].apply(measures.distance, axis=1)
     
     if 'distance' in include and 'angle' in include:
-        plays['angle'] = plays[['st_x', 'distance']].apply(angle, axis=1)
+        plays['angle'] = plays[['st_x', 'distance']].apply(measures.angle, axis=1)
     
     if 'danger' in include:
         plays['danger'] = 'd_not_a_shot'
         shots = ['Shot', 'Missed Shot', 'Goal']
         plays.loc[plays['event'].isin(shots), 'danger'] = plays.loc[
-                plays['event'].isin(shots), 'distance'].apply(danger)
+                plays['event'].isin(shots), 'distance'].apply(measures.danger)
         plays = pd.get_dummies(plays, columns=['event', 'danger'])
     else:
         plays = pd.get_dummies(plays, columns=['event'])
@@ -172,9 +165,9 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
     
     if 'zones' in include:
         plays['offensive_zone_home'] = plays[['st_x', 'home_team_for']].apply(
-                                offensive_zone_home, axis=1)
+                                measures.offensive_zone_home, axis=1)
         plays['offensive_zone_away'] = plays[['st_x', 'home_team_for']].apply(
-                                offensive_zone_away, axis=1)
+                                measures.offensive_zone_away, axis=1)
 
     predict_columns = ['game_id', 'st_x', 'st_y', 'distance', 'angle',
                         'home_team_for', 'offensive_zone_home', 'offensive_zone_away']
@@ -194,29 +187,8 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
     if 'distance' not in include and 'danger' in include:
         plays = plays.drop(columns=['distance'])
 
-    n_games = len(plays.game_id.unique())
-    if zero_padding:
-        n_events = plays.groupby(['game_id']).size().describe()['max'].astype(np.int64)
-    else:
-        n_events = plays.groupby(['game_id']).size().describe()['min'].astype(np.int64)
-    n_columns = len(plays.columns)
-
-    X = np.zeros((n_games, n_events, n_columns)) # Initialize 3D array for data
-    
-    if zero_padding: 
-        index_dummy = plays.columns.get_loc('event_dummy') 
-
-    for i, game_id in enumerate(sorted(plays.game_id.unique())):
-        game_events = plays[plays['game_id'] == game_id]
-        if zero_padding: # Fill with dummy values
-            fill = np.zeros((n_events-game_events.shape[0], n_columns))
-            fill[:, index_dummy] = 1
-            X[i] = np.vstack((game_events.to_numpy(), fill))
-        # full_events = np.vstack((game_events, fill))
-        else:
-            X[i] = game_events.iloc[:n_events,:].to_numpy()    
-
-    X_columns = dict(zip(plays.columns, range(n_columns)))
+    X = to_3d_array(plays, zero_padding)    
+    X_columns = dict(zip(plays.columns, range(len(plays.columns))))
     
     if save_as_file:
         save_files(X, y, X_columns, y_columns, suffix)
