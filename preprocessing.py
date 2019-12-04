@@ -74,7 +74,7 @@ def to_3d_array(plays, zero_padding):
         # full_events = np.vstack((game_events, fill))
         else:
             X[i] = game_events.iloc[:n_events,:].to_numpy()
-    
+    assert np.isnan(X).any() == False  
     return X
 
 def preprocess(plays=None, games=None, relevant_events=None, include=[], 
@@ -187,7 +187,7 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
     if 'distance' not in include and 'danger' in include:
         plays = plays.drop(columns=['distance'])
 
-    X = to_3d_array(plays, zero_padding)    
+    X = to_3d_array(plays, zero_padding)  
     X_columns = dict(zip(plays.columns, range(len(plays.columns))))
     
     if save_as_file:

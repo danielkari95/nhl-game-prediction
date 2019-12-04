@@ -19,7 +19,7 @@ def plot(y_true, y_pred, classes,
                           title=None,
                           cmap=plt.cm.Greens):
     """
-    This function prints and plots the confusion matrix.
+    This function plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
     if not title:
