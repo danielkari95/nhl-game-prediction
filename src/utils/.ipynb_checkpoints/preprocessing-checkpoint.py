@@ -2,8 +2,11 @@ import numpy as np
 import pandas as pd
 import json
 import measures
+import os
 
 from sklearn.preprocessing import StandardScaler
+
+os.chdir('/home/daniel/Asiakirjat/GitHub/Gradu/')
 
 def home_team_for(ids):
     if ids[0] == ids[1]:
@@ -93,6 +96,7 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
                            'Giveaway', 
                            'Blocked Shot', 
                            'Shot', 
+                           'Stoppage',
                            'Hit', 
                            'Penalty', 
                            'Takeaway', 
@@ -106,13 +110,14 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
     plays = plays[plays['period'] <= 3] # Only plays in regulation included
     
     
-    relevant_columns = ['play_id', 'game_id', 'team_id_for', 'team_id_against', 
+    relevant_columns = ['game_id', 'team_id_for', 'team_id_against', 
                         'event', 'st_x', 'st_y']
     plays = plays.loc[:, relevant_columns]
 
     plays = plays.loc[~((plays['st_x']==0) & (plays['st_y']==0) & 
                     (plays['event']=='Faceoff'))]
 
+    # print("Number of rows dropped:", plays.shape[0]-plays.dropna().shape[0])
     plays = plays.dropna()
     
     if not zero_padding:
@@ -147,6 +152,7 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
 
     games = games.loc[games['game_id'].isin(plays['game_id'].unique()), :]
     games = games.sort_values(by='game_id')
+    games = games.loc[:, ['game_id', 'home_team_id', 'outcome', 'home_goals', 'away_goals']]
 
     plays = plays.merge(games, on='game_id')
 
@@ -177,12 +183,10 @@ def preprocess(plays=None, games=None, relevant_events=None, include=[],
             plays.columns.str.contains('danger'))]
 
 
-    if ('st_x' or 'st_y' or 'distance' or 'angle') in include:
-        scale_columns = ['st_x', 'st_y', 'distance', 'angle']
-        plays.loc[:, plays.columns.isin(scale_columns)] = StandardScaler().fit_transform(
+    
+    scale_columns = ['st_x', 'st_y', 'distance', 'angle']
+    plays.loc[:, plays.columns.isin(scale_columns)] = StandardScaler().fit_transform(
                             plays.loc[:, plays.columns.isin(scale_columns)])
-    else:
-        plays = plays.drop(columns=['st_x', 'st_y'])
         
     if 'distance' not in include and 'danger' in include:
         plays = plays.drop(columns=['distance'])

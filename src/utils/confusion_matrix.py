@@ -17,7 +17,9 @@ from sklearn.utils.multiclass import unique_labels
 def plot(y_true, y_pred, classes,
                           normalize=False,
                           title=None,
-                          cmap=plt.cm.Greens):
+                          cmap=plt.cm.Greens,
+                          show_colorbar=True,
+                          ax=None):
     """
     This function plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -29,15 +31,26 @@ def plot(y_true, y_pred, classes,
             title = 'Confusion matrix, without normalization'
 
     # Compute confusion matrix
-    cm = confusion_matrix(y_true.argmax(axis=1), y_pred.argmax(axis=1))
+    
+    if np.ndim(y_true) > 1:
+        cm = confusion_matrix(y_true.argmax(axis=1), y_pred.argmax(axis=1))
+    else:
+        cm = confusion_matrix(y_true, y_pred)
     # Only use the labels that appear in the data
     # classes = classes[unique_labels(y_true, y_pred)]
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
+
     im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
-    ax.figure.colorbar(im, ax=ax)
+    
+    if show_colorbar:
+        ax.figure.colorbar(im, ax=ax)
+    
     # We want to show all ticks...
     ax.set(xticks=np.arange(cm.shape[1]),
            yticks=np.arange(cm.shape[0]),
@@ -48,7 +61,7 @@ def plot(y_true, y_pred, classes,
            xlabel='Predicted label')
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), ha="right",
+    plt.setp(ax.get_xticklabels(), ha="center",
              rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
@@ -60,8 +73,8 @@ def plot(y_true, y_pred, classes,
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black")
     
-    bottom, top = ax.get_ylim()
-    ax.set_ylim(bottom + 0.5, top - 0.5)
+    # bottom, top = ax.get_ylim()
+    # ax.set_ylim(bottom + 0.5, top - 0.5)
     
-    fig.tight_layout()
+    # fig.tight_layout()
     return ax

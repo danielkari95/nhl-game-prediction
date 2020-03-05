@@ -8,14 +8,6 @@ def angle(x):
         return 0
     else:
         return np.degrees(np.arccos((90.0-x[0])/x[1]))
-        
-def danger(distance):
-    if distance <= 15:
-        return 'a_high'
-    elif distance <= 30:
-        return 'b_med'
-    else:
-        return 'c_low'
 
 def offensive_zone_home(x):
     if x[0] >= 25 and x[1] == 1:
