@@ -1,3 +1,4 @@
+import path
 import numpy as np
 import pandas as pd
 import json
@@ -80,15 +81,17 @@ def load_data(suffix, y_goal_diff=False):
     return X_train, X_test, y_train, y_test, X_columns, y_columns
 
 def to_3d_array(plays):
-    n_games = len(plays.game_id.unique())
-    n_events = plays.groupby(['game_id']).size().describe()['max'].astype(np.int64)
+    """Transform preprocessed plays to final 3D input matrix X."""
+   
+    n_games = len(plays['game_id'].unique())
+    n_events = np.amax(plays.groupby(['game_id']).size())
     n_columns = len(plays.columns)
 
     X = np.zeros((n_games, n_events, n_columns)) # Initialize 3D array for data
     
     index_dummy = plays.columns.get_loc('event_dummy') 
 
-    for i, game_id in enumerate(sorted(plays.game_id.unique())):
+    for i, game_id in enumerate(sorted(plays['game_id'].unique())):
         game_events = plays[plays['game_id'] == game_id]
         fill = np.zeros((n_events-game_events.shape[0], n_columns)) # Fill with zeros
         fill[:, index_dummy] = 1 # Set the value of dummy variable to one
@@ -153,8 +156,10 @@ def preprocess_game_stats(game_stats=None, y_goal_diff=False, suffix=""):
 
     return X_train, X_test, y_train, y_test
 
-def make_index(n_games, ids, suffix):
-    index = np.arange(n_games)
+def make_identifiers(ids, suffix):
+    """Function for saving game_id and index to guarantee that same training and test 
+    data is used for all models with the same features."""
+    index = np.arange(len(ids))
     index_train, index_test, id_train, id_test = train_test_split(index, ids, 
                                                     test_size=0.2, random_state=13)
     
@@ -165,57 +170,10 @@ def make_index(n_games, ids, suffix):
     os.mkdir('data/{0}/id'.format(suffix))
     np.save('data/{0}/id/id_train.npy'.format(suffix), id_train)
     np.save('data/{0}/id/id_test.npy'.format(suffix), id_test)
-    
-    return index_train, index_test
 
-def preprocess_y(games=None, plays=None, binary_y=False, y_goal_diff=False, 
-                save_as_file=False, suffix=""):
-    
-    if plays is None:
-        plays = pd.read_csv('data/csv/game_plays.csv')
-    
-    if games is None:
-        games = pd.read_csv('data/csv/game.csv')
-
-    games = games.loc[games['game_id'].isin(plays['game_id'].unique()), 
-                    ['game_id', 'home_team_id', 'outcome', 'home_goals', 'away_goals']]
-    games = games.sort_values(by='game_id')
-    
-    if not y_goal_diff:
-        y = pd.get_dummies(games['outcome'].apply(result, binary=binary_y))
-        y_columns = dict(zip(y.columns, range(len(y.columns))))
-    else:
-        y = games[['outcome', 'home_goals', 'away_goals']].apply(goal_difference, axis=1)
-        y_columns = {'goal_diff': 0}
-
-    y = y.to_numpy()
-    
-    index_train = np.load('data/{0}/index/index_train.npy'.format(suffix))
-    index_test = np.load('data/{0}/index/index_test.npy'.format(suffix))
-
-    suffix_y = '_goal_diff' if y_goal_diff else '_result'
-
-    if save_as_file:
-        save_data(y[index_train], y[index_test], y_columns, suffix, suffix_y)
-
-    return y[index_train], y[index_test], y_columns                      
-    
-
-def preprocess_X(plays=None, games=None, relevant_events=None, include=[], 
-               save_as_file=False, return_arrays=True, suffix=""):    
-    """ Function for preprocessing the play-by-play data for analysis. """
-    
-    if save_as_file and os.path.exists('data/{0}'.format(suffix)):
-        raise ValueError("Directory already exists with suffix name.")
-
-    if save_as_file and not os.path.exists('data/{0}'.format(suffix)):
-        os.mkdir('data/{0}'.format(suffix))
-
-    if plays is None:
-        plays = pd.read_csv('data/csv/game_plays.csv')
-
-    if games is None:
-        games = pd.read_csv('data/csv/game.csv')
+def make_input(games, plays, relevant_events=None, include=[], 
+                save_as_file=False, return_arrays=False, suffix=""):
+    """Construct input matrix X."""
     
     if relevant_events is None: # Use default events as features 
         relevant_events = ['Faceoff', 'Giveaway', 'Blocked Shot', 'Shot', 
@@ -225,26 +183,25 @@ def preprocess_X(plays=None, games=None, relevant_events=None, include=[],
     plays = plays[plays['period'] <= 3] # Only plays in regulation included
     plays = plays.loc[:, ['game_id', 'team_id_for', 'team_id_against', 'event', 'st_x', 'st_y']]
 
-    # Filter central ice faceoffs
+    # Filter central ice faceoffs out
     plays = plays.loc[~((plays['st_x']==0) & (plays['st_y']==0) & (plays['event']=='Faceoff'))]
     plays = plays.dropna() # Remove rows with missing data
-    
-    if 'distance' in include:
-        plays['distance'] = plays[['st_x', 'st_y']].apply(measures.distance, axis=1)
-    
-    if 'distance' in include and 'angle' in include:
-        plays['angle'] = plays[['st_x', 'distance']].apply(measures.angle, axis=1)
     
     plays = pd.get_dummies(plays, columns=['event'])
     plays['event_dummy'] = 0
 
     plays.rename(columns=lambda x: x.replace(' ', '_').lower(), inplace=True)
 
-    games = games.loc[games['game_id'].isin(plays['game_id'].unique()), ['game_id', 'home_team_id']]
-    games = games.sort_values(by='game_id')
+    games = games.loc[:, ['game_id', 'home_team_id']]
     plays = plays.merge(games, on='game_id')
 
     plays['home_team_for'] = plays[['team_id_for', 'home_team_id']].apply(home_team_for, axis=1)
+    
+    if 'distance' in include:
+        plays['distance'] = plays[['st_x', 'st_y']].apply(measures.distance, axis=1)
+    
+    if 'distance' in include and 'angle' in include:
+        plays['angle'] = plays[['st_x', 'distance']].apply(measures.angle, axis=1)
     
     if 'zones' in include:
         plays['offensive_zone_home'] = plays[['st_x', 'home_team_for']].apply(
@@ -263,11 +220,8 @@ def preprocess_X(plays=None, games=None, relevant_events=None, include=[],
 
     X = to_3d_array(plays)
 
-    if not os.path.exists('data/{0}/index'.format(suffix)):
-        index_train, index_test = make_index(X.shape[0], X[:, 0, 0], suffix)
-    else:
-        index_train = np.load('data/index/index_train.npy')
-        index_test = np.load('data/index/index_test.npy')
+    index_train = np.load('data/{0}/index/index_train.npy'.format(suffix))
+    index_test = np.load('data/{0}/index/index_test.npy'.format(suffix))
 
     X_train, X_test = X[index_train, :, 1:], X[index_test, :, 1:]
 
@@ -278,3 +232,57 @@ def preprocess_X(plays=None, games=None, relevant_events=None, include=[],
     
     if return_arrays:
         return X_train, X_test, X_columns
+
+def make_output(games, binary_y=False, y_goal_diff=False, 
+                save_as_file=False, return_arrays=False, suffix=""):
+    """Construct output matrix or vector y."""
+    
+    games = games.loc[:, ['outcome', 'home_goals', 'away_goals']]
+    
+    if not y_goal_diff:
+        y = pd.get_dummies(games['outcome'].apply(result, binary=binary_y))
+        y_columns = dict(zip(y.columns, range(len(y.columns))))
+    else:
+        y = games[['outcome', 'home_goals', 'away_goals']].apply(goal_difference, axis=1)
+        y_columns = {'goal_diff': 0}
+
+    y = y.to_numpy()
+    
+    index_train = np.load('data/{0}/index/index_train.npy'.format(suffix))
+    index_test = np.load('data/{0}/index/index_test.npy'.format(suffix))
+
+    suffix_y = '_goal_diff' if y_goal_diff else '_result'
+
+    if save_as_file:
+        save_data(y[index_train], y[index_test], y_columns, suffix, suffix_y)
+
+    if return_arrays:
+        return y[index_train], y[index_test], y_columns                      
+    
+
+def transform_data(plays=None, games=None, relevant_events=None, include=[], suffix=""):    
+    """ Function for preparing data for modeling. """
+    
+    if os.path.exists('data/{0}'.format(suffix)):
+        raise ValueError("Directory already exists with suffix name.")
+    else:
+        os.mkdir('data/{0}'.format(suffix))
+
+    if plays is None:
+        plays = pd.read_csv('data/csv/game_plays.csv')
+
+    if games is None:
+        games = pd.read_csv('data/csv/game.csv')
+
+    # Only games with plays included
+    games = games.loc[games['game_id'].isin(plays['game_id'].unique()), :]
+    # Plays will be sorted by game_id when the the final 3D array is produced
+    games = games.sort_values(by='game_id')
+
+    make_identifiers(plays['game_id'].unique(), suffix)
+    make_input(games, plays, relevant_events, include, True, False, suffix)
+    make_output(games, False, True, True, False, suffix) # y = goal_differential
+    make_output(games, False, False, True, False, suffix) # y = result
+    
+    
+    
