@@ -1,4 +1,4 @@
-# The better team always wins - or does it? A study to understand how random chance affects the outcome ofan ice hockey game
+# The better team always wins - or does it?
 
 This analysis is for my master's thesis.
 
