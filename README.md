@@ -1,4 +1,4 @@
-# How accurately can we predict the result of an NHL game using play-by-play data?
+# The better team always wins - or does it? A study to understand how random chance affects the outcome ofan ice hockey game
 
 This analysis is for my master's thesis.
 
